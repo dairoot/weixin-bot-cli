@@ -1,0 +1,5 @@
+node_modules/
+*.tgz
+.weixin-bot/
+coverage/
+.DS_Store

@@ -1,0 +1,9 @@
+This implementation follows the Weixin iLink protocol and client behavior documented
+and implemented in Tencent/openclaw-weixin version 2.4.10 (MIT license).
+
+Reference: https://github.com/Tencent/openclaw-weixin
+Copyright (C) 2026 Tencent. All rights reserved.
+
+The wire version is retained for protocol compatibility; bot_agent identifies this
+independent implementation as WeixinBotCLI/0.1.0. This package is not an official
+Tencent or OpenClaw release.
