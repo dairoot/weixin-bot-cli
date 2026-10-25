@@ -107,13 +107,12 @@ const fs = require('node:fs');
 const path = require('node:path');
 const args = process.argv.slice(2);
 const command = path.basename(process.argv[1]);
-fs.appendFileSync(process.env.WEIXIN_INSTALL_TEST_LOG, JSON.stringify({command,args})+'\\n');
+fs.appendFileSync(process.env.WEIXIN_INSTALL_TEST_LOG, JSON.stringify({command,args,cwd:process.cwd()})+'\\n');
 if (process.env.WEIXIN_INSTALL_TEST_FAIL === command) process.exit(22);
 if (command === 'curl') {
   fs.copyFileSync(process.env.WEIXIN_INSTALL_TEST_ARCHIVE, args[args.indexOf('-o')+1]);
 } else {
-  const prefix = args[args.indexOf('--prefix')+1];
-  fs.cpSync(process.env.WEIXIN_INSTALL_TEST_QR, path.join(prefix,'node_modules','qrcode-terminal'), {recursive:true});
+  fs.cpSync(process.env.WEIXIN_INSTALL_TEST_QR, path.join(process.cwd(),'node_modules','qrcode-terminal'), {recursive:true});
 }
 `;
   for (const command of ['curl', 'npm']) await writeFile(join(stubs, command), stub, { mode: 0o755 });
@@ -127,13 +126,17 @@ if (command === 'curl') {
 
 test('bootstrap runs the full download/install flow and forwards quoted paths and ref', async t => {
   const { options, args, env, log } = await bootstrapFixture(t);
-  const result = await exec('bash', [script, '--ref', 'feature/install', ...args], { env, timeout: 15_000 });
+  const result = await exec('bash', ['-c', 'set -o pipefail; cat "$1" | bash -s -- "${@:2}"',
+    'weixin-install-test', script, '--ref', 'feature/install', ...args], { env, timeout: 15_000 });
   assert.match(result.stdout, /安装完成/);
   const calls = (await readFile(log, 'utf8')).trim().split('\n').map(JSON.parse);
   assert.ok(calls[0].args.includes('https://codeload.github.com/dairoot/weixin-bot-cli/tar.gz/feature%2Finstall'));
   assert.equal(calls[1].command, 'npm');
   for (const flag of ['ci', '--ignore-scripts', '--omit=dev']) assert.ok(calls[1].args.includes(flag));
   const download = calls[0].args[calls[0].args.indexOf('-o') + 1];
+  assert.equal(calls[1].args.includes('--prefix'), false);
+  // npm must run inside the extracted package, including when curl pipes to bash.
+  assert.equal(calls[1].cwd.endsWith(`${dirname(download).split('/').at(-1)}/source`), true);
   await assert.rejects(access(dirname(download)), { code: 'ENOENT' });
   assert.equal((await exec(join(options.binDir, 'weixin-bot'), ['--version'])).stdout.trim(), '0.1.0');
   // The emitted PATH line uses valid shell quoting even with spaces/apostrophes.

@@ -58,7 +58,8 @@ main() {
   if [ -z "$ref" ]; then printf '安装版本不能为空。\n' >&2; return 1; fi
   local encoded_ref
   encoded_ref=$(node -p 'encodeURIComponent(process.argv[1])' -- "$ref")
-  weixin_install_tmp=$(mktemp -d "${TMPDIR:-/tmp}/weixin-bot-install.XXXXXX")
+  local temporary_root="${TMPDIR:-/tmp}"
+  weixin_install_tmp=$(mktemp -d "${temporary_root%/}/weixin-bot-install.XXXXXX")
   trap cleanup EXIT
   trap 'exit 130' INT
   trap 'exit 143' TERM
@@ -73,7 +74,9 @@ main() {
     return 1
   fi
   printf '安装锁定版本的依赖…\n' >&2
-  npm ci --prefix "$weixin_install_tmp/source" --omit=dev --ignore-scripts --no-audit --no-fund
+  # Install from the package directory. Some npm versions misidentify the root
+  # package when --prefix points through a temporary/symlinked path.
+  (cd "$weixin_install_tmp/source" && npm ci --omit=dev --ignore-scripts --no-audit --no-fund)
   node "$weixin_install_tmp/source/scripts/install.mjs" ${install_args[@]+"${install_args[@]}"}
 }
 
