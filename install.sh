@@ -11,7 +11,7 @@ cleanup() {
 
 usage() {
   cat <<'HELP'
-用法：curl -fsSL https://raw.githubusercontent.com/dairoot/weixin-bot-cli/main/install.sh | bash
+用法：curl -fsSL https://raw.githubusercontent.com/dairoot/weixin-bot-cli/refs/heads/main/install.sh | bash
 或：  bash install.sh [选项]
 
   --ref REF           安装指定分支、标签或提交，默认 main（也可设 WEIXIN_BOT_REF）

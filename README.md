@@ -9,7 +9,7 @@
 macOS / Linux 执行一条命令，同时安装 CLI 和 agent skill：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/dairoot/weixin-bot-cli/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/dairoot/weixin-bot-cli/refs/heads/main/install.sh | bash
 ```
 
 安装位置：
@@ -34,10 +34,10 @@ curl -fsSL https://raw.githubusercontent.com/dairoot/weixin-bot-cli/main/install
 自定义安装目录或只安装 skill：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/dairoot/weixin-bot-cli/main/install.sh | bash -s -- \
+curl -fsSL https://raw.githubusercontent.com/dairoot/weixin-bot-cli/refs/heads/main/install.sh | bash -s -- \
   --skill-dir "$HOME/.agents/skills/weixin-bot" --no-bin
 
-curl -fsSL https://raw.githubusercontent.com/dairoot/weixin-bot-cli/main/install.sh | bash -s -- \
+curl -fsSL https://raw.githubusercontent.com/dairoot/weixin-bot-cli/refs/heads/main/install.sh | bash -s -- \
   --skill-dir "$HOME/.codex/skills/weixin-bot" --bin-dir "$HOME/.local/bin"
 ```
 
