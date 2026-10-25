@@ -3,19 +3,50 @@ name: weixin-bot
 description: "通过微信 iLink Bot 扫码登录、发送文本消息、接收微信消息、查看最近消息和可回复用户。当用户要求连接微信 Bot、给微信联系人发消息、收取或监听 Bot 消息时使用。"
 metadata:
   requires:
-    bins: [node]
+    bins: ["weixin-bot"]
+  cliHelp: "weixin-bot --help"
 ---
 
 # 微信 Bot CLI
 
-使用本 skill 目录中的 `scripts/weixin-bot.mjs`。将下面的 `<SKILL_DIR>` 替换为本文件所在目录的绝对路径；无需安装 OpenClaw 或全局 npm 包。
+直接使用 `weixin-bot` CLI；一键安装器会同时安装命令和 skill，无需安装 OpenClaw 或全局 npm 包。正常情况下无需查找 skill 目录或脚本路径。
 
 ```bash
-node <SKILL_DIR>/scripts/weixin-bot.mjs --help
-node <SKILL_DIR>/scripts/weixin-bot.mjs status --json
+weixin-bot --help
+weixin-bot status --json
 ```
 
 结果为 JSON/NDJSON，诊断写入 stderr。每个命令均支持 `--profile NAME` 和 `--state-dir PATH`；同一操作链必须使用同一 profile 和数据目录。默认数据目录为 `~/.weixin-bot`。
+
+### 命令找不到时
+
+仅当执行返回 `weixin-bot: command not found` 或同类错误时，检查一键安装器的默认命令入口：
+
+```bash
+"$HOME/.local/bin/weixin-bot" status --json
+```
+
+若成功，说明当前执行进程的 `PATH` 未包含命令目录；后续每次调用都将 `weixin-bot` 替换为 `"$HOME/.local/bin/weixin-bot"`。不同工具调用不一定共享 shell，不要依赖上一条命令的 `export` 或 alias。需要永久使用短命令时，将该目录加入启动 agent 的环境变量 `PATH` 并重启 agent 进程。
+
+若默认命令入口不存在，且是只安装 skill（`--no-bin` 或 `skill install`）的默认安装，可执行自带启动脚本：
+
+```bash
+node "$HOME/.agents/skills/weixin-bot/scripts/weixin-bot.mjs" status --json
+```
+
+若成功，后续每次调用都使用同一启动脚本。自定义安装目录以安装器输出或宿主提供的实际路径为准；没有路径信息时请用户提供安装位置。不要全盘 `find /`、猜测 `~/.claude` 等目录，也不要把 `PATH` 缺失误报为 skill 未安装。已知入口均不存在时才提示重新安装。
+
+### 执行超时
+
+执行工具及外层 MCP 的超时应大于 CLI 的等待时间，并留出启动和清理时间。如果宿主每次只允许 8 秒，登录和单次接收使用较短等待：
+
+```bash
+weixin-bot login --no-wait --timeout 5 --json
+weixin-bot login --timeout 5 --json
+weixin-bot receive --once --timeout 5 --json
+```
+
+短时登录等待结束后可继续同一登录，单次接收没有消息则按发送前检查处理；不要密集循环或在短超时执行器中使用 `--watch`。发送超时的结果仍可能不确定，按下方结果判断处理，不自动重发。
 
 ## 登录
 
@@ -28,16 +59,16 @@ node <SKILL_DIR>/scripts/weixin-bot.mjs status --json
 登录成功只代表账号已连接，**不代表已经具备向某个用户发送可送达消息的会话上下文**。登录返回的 `user_id` 是扫码者 ID，可用于核对“给我发消息”的目标，但不能代替该用户入站消息中的 `context_token`。用户要求“登录后给我发一条消息”时，登录后继续执行下面的发送前检查。
 
 ```bash
-node <SKILL_DIR>/scripts/weixin-bot.mjs login --no-wait --json
-node <SKILL_DIR>/scripts/weixin-bot.mjs login --json --timeout 60
+weixin-bot login --no-wait --json
+weixin-bot login --json --timeout 60
 ```
 
 ## 接收与确定收件人
 
 ```bash
-node <SKILL_DIR>/scripts/weixin-bot.mjs receive --once --timeout 35 --json
-node <SKILL_DIR>/scripts/weixin-bot.mjs contacts --json
-node <SKILL_DIR>/scripts/weixin-bot.mjs inbox --limit 20 --json
+weixin-bot receive --once --timeout 35 --json
+weixin-bot contacts --json
+weixin-bot inbox --limit 20 --json
 ```
 
 - `receive` 每条消息输出一个 `event: "message"` 对象，结束时输出 `poll_complete`。没有消息是正常结果。
@@ -61,13 +92,13 @@ node <SKILL_DIR>/scripts/weixin-bot.mjs inbox --limit 20 --json
 **不要为了完成普通发送请求自行加上 `--allow-without-context`。** 缺少上下文时按上述流程补齐，而不是绕过 `MISSING_CONTEXT`。只有用户明确要求调试“无会话令牌发送”时才使用该选项，并说明接口接受请求也可能不送达。若用户明确提供了与目标用户对应的 `--context-token`，可以使用，无需把令牌展示在回复中。
 
 ```bash
-node <SKILL_DIR>/scripts/weixin-bot.mjs contacts --json
+weixin-bot contacts --json
 # 目标用户缺少上下文时，让对方发消息，再接收并检查 contacts
-node <SKILL_DIR>/scripts/weixin-bot.mjs receive --once --timeout 35 --json
-node <SKILL_DIR>/scripts/weixin-bot.mjs contacts --json
+weixin-bot receive --once --timeout 35 --json
+weixin-bot contacts --json
 # 确认目标用户上下文已缓存后发送
-node <SKILL_DIR>/scripts/weixin-bot.mjs send --to '<USER_ID>' --text '你好' --json
-node <SKILL_DIR>/scripts/weixin-bot.mjs send --to '<USER_ID>' --file '/absolute/path/reply.txt' --json
+weixin-bot send --to '<USER_ID>' --text '你好' --json
+weixin-bot send --to '<USER_ID>' --file '/absolute/path/reply.txt' --json
 ```
 
 `--file` 发送 UTF-8 文件的文本内容；不表示发送文件附件。构建 shell 命令时正确引用用户内容，优先用文本文件避免 shell 插值。
@@ -93,8 +124,8 @@ node <SKILL_DIR>/scripts/weixin-bot.mjs send --to '<USER_ID>' --file '/absolute/
 仅当用户要求持续监听时使用，并保持运行进程可管理：
 
 ```bash
-node <SKILL_DIR>/scripts/weixin-bot.mjs receive --watch --json
-node <SKILL_DIR>/scripts/weixin-bot.mjs receive --watch --max-messages 5 --json
+weixin-bot receive --watch --json
+weixin-bot receive --watch --max-messages 5 --json
 ```
 
 使用 Ctrl+C 或 SIGTERM 停止。普通查消息优先使用 `--once`，避免无限等待。每个 profile 同时只运行一个接收进程；与 OpenClaw 同一 Bot 的接收器也应避免并行运行。监听模式会对暂时性网络错误退避重试，登录过期则退出。

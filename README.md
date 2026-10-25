@@ -25,11 +25,13 @@ curl -fsSL https://raw.githubusercontent.com/dairoot/weixin-bot-cli/refs/heads/m
 安装完成后新开一个 Codex / agent 会话，即可要求它“登录微信 Bot”。也可以直接使用 CLI：
 
 ```bash
-~/.local/bin/weixin-bot --help
-~/.local/bin/weixin-bot login
+weixin-bot --help
+weixin-bot login
 ```
 
-如果 `~/.local/bin` 尚未加入 `PATH`，安装器会打印配置命令；将其加入 `~/.zshrc` 或 `~/.bashrc` 后，重新打开终端即可使用 `weixin-bot` 短命令。安装器不会自动修改 shell 配置。
+如果 `~/.local/bin` 尚未加入 `PATH`，安装器会打印配置命令；将其加入 `~/.zshrc` 或 `~/.bashrc` 后，重新打开终端即可使用 `weixin-bot` 短命令。安装器不会自动修改 shell 配置。当前终端也可直接执行 `"$HOME/.local/bin/weixin-bot" login`。
+
+Skill 中的常规命令统一使用 `weixin-bot`，不需要模型查找 skill 的安装目录。对于 harness 等独立启动的 agent，需确保启动进程的 `PATH` 包含命令目录；若短命令不可用，skill 会指导使用上述固定路径。更新 skill 后需新建对话，避免继续沿用旧会话中的指引；修改进程环境后需重启 agent。
 
 自定义安装目录或只安装 skill：
 
@@ -51,16 +53,16 @@ curl -fsSL https://raw.githubusercontent.com/dairoot/weixin-bot-cli/refs/heads/m
 
 ```bash
 # 长轮询一次，最多等待约 35 秒
-~/.local/bin/weixin-bot receive --once
+weixin-bot receive --once
 
 # 列出收到过消息的可回复用户
-~/.local/bin/weixin-bot contacts
+weixin-bot contacts
 
 # 将 USER_ID 替换为 contacts.user_id 或消息的 from_user_id
-~/.local/bin/weixin-bot send --to 'USER_ID' --text '你好，我已收到你的消息'
+weixin-bot send --to 'USER_ID' --text '你好，我已收到你的消息'
 
 # 持续接收；Ctrl+C 停止
-~/.local/bin/weixin-bot receive --watch
+weixin-bot receive --watch
 ```
 
 ## 从源码安装（开发者）
@@ -69,19 +71,19 @@ curl -fsSL https://raw.githubusercontent.com/dairoot/weixin-bot-cli/refs/heads/m
 git clone https://github.com/dairoot/weixin-bot-cli.git
 cd weixin-bot-cli
 npm ci
-node bin/weixin-bot.js skill install
+node scripts/install.mjs
 ```
 
-该命令默认安装到 `~/.agents/skills/weixin-bot`，包含 `SKILL.md`、启动脚本和独立运行时，移动或删除源码仓库后仍可使用。agent 通过 skill 内的脚本调用 CLI，不依赖 `npm link`。开发时可直接运行 `node bin/weixin-bot.js`，或用 `npm link` 将源码注册为全局短命令。
+该命令使用与一键安装相同的安装器：默认安装 skill 和独立运行时到 `~/.agents/skills/weixin-bot`，同时创建 `~/.local/bin/weixin-bot`；已有安装会先备份再更新。移动或删除源码仓库后仍可使用。agent 直接调用 `weixin-bot`，不依赖 `npm link`。开发时可直接运行 `node bin/weixin-bot.js`，或用 `npm link` 将源码注册为全局短命令。
 
-指定其他 agent 的 skill 目录：
+指定其他 agent 的 skill 目录（同时安装 CLI）：
 
 ```bash
-node bin/weixin-bot.js skill install --dir ~/.codex/skills/weixin-bot
-node ~/.agents/skills/weixin-bot/scripts/weixin-bot.mjs status --json
+node scripts/install.mjs --skill-dir "$HOME/.codex/skills/weixin-bot"
+weixin-bot status --json
 ```
 
-`skill install` 保持不覆盖已有目录的行为；需要自动备份更新时，使用上面的一键安装命令。也可直接在仓库内使用 `skills/weixin-bot/scripts/weixin-bot.mjs`。
+只需安装 skill 时仍可用 `node bin/weixin-bot.js skill install [--dir PATH]`；该命令不创建 CLI 短命令，也不覆盖已有目录。默认目录可用 `node "$HOME/.agents/skills/weixin-bot/scripts/weixin-bot.mjs" status --json` 启动；自定义目录需向 agent 提供实际启动脚本路径。也可直接在仓库内使用 `skills/weixin-bot/scripts/weixin-bot.mjs`。
 
 ## 命令和输出
 
