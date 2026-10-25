@@ -2,16 +2,48 @@
 
 参考 [Tencent/openclaw-weixin](https://github.com/Tencent/openclaw-weixin) 2.4.10 的 iLink 协议，将扫码登录、发送文本和接收消息封装为独立 CLI。无需 OpenClaw、Gateway 或模型 API。
 
-环境：Node.js **22.13.0 或更新版本**。运行时只依赖 `qrcode-terminal`，不需要编译。
+环境：Node.js **22.13.0 或更新版本**（含 npm）。运行时只依赖 `qrcode-terminal`，不需要编译。
 
-## 快速开始
+## 一键安装（推荐）
 
-在项目目录安装依赖后，可以直接运行：
+macOS / Linux 执行一条命令，同时安装 CLI 和 agent skill：
 
 ```bash
-npm install
-node bin/weixin-bot.js login
+curl -fsSL https://raw.githubusercontent.com/dairoot/weixin-bot-cli/main/install.sh | bash
 ```
+
+安装位置：
+
+- Skill 与独立运行时：`~/.agents/skills/weixin-bot`
+- CLI 快捷命令：`~/.local/bin/weixin-bot`
+- 更新前的完整备份：`~/.local/share/weixin-bot/backups`
+
+无需 Git、SSH 密钥、`sudo` 或全局 npm 安装。脚本通过 HTTPS 下载源码，使用锁文件安装依赖并禁用依赖安装脚本，然后验证运行时再完成安装；需要本机已有 Node.js、npm、curl 和 tar。缺少工具或 Node.js 版本过低时，会直接给出提示。
+
+**更新时重新执行同一条命令即可。** 现有 weixin-bot skill（包括本地修改）会完整备份，新版本替换其目录；其他同名文件或不属于本项目的目录不会被覆盖。安装失败会尝试恢复旧版本，登录凭证和消息仍保留在 `~/.weixin-bot`。
+
+安装完成后新开一个 Codex / agent 会话，即可要求它“登录微信 Bot”。也可以直接使用 CLI：
+
+```bash
+~/.local/bin/weixin-bot --help
+~/.local/bin/weixin-bot login
+```
+
+如果 `~/.local/bin` 尚未加入 `PATH`，安装器会打印配置命令；将其加入 `~/.zshrc` 或 `~/.bashrc` 后，重新打开终端即可使用 `weixin-bot` 短命令。安装器不会自动修改 shell 配置。
+
+自定义安装目录或只安装 skill：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/dairoot/weixin-bot-cli/main/install.sh | bash -s -- \
+  --skill-dir "$HOME/.agents/skills/weixin-bot" --no-bin
+
+curl -fsSL https://raw.githubusercontent.com/dairoot/weixin-bot-cli/main/install.sh | bash -s -- \
+  --skill-dir "$HOME/.codex/skills/weixin-bot" --bin-dir "$HOME/.local/bin"
+```
+
+可用 `--ref <分支、标签或提交>` 指定安装版本（需该版本包含安装器），用 `--backup-dir PATH` 修改备份目录；`--help` 查看所有选项。Windows 可在 WSL 中执行。
+
+## 登录与收发消息
 
 用手机微信扫描终端二维码并确认。如要求验证码，输入手机上显示的数字。登录凭证会保存到 `~/.weixin-bot/default/account.json`，后续命令自动读取。
 
@@ -19,27 +51,28 @@ node bin/weixin-bot.js login
 
 ```bash
 # 长轮询一次，最多等待约 35 秒
-node bin/weixin-bot.js receive --once
+~/.local/bin/weixin-bot receive --once
 
 # 列出收到过消息的可回复用户
-node bin/weixin-bot.js contacts
+~/.local/bin/weixin-bot contacts
 
 # 将 USER_ID 替换为 contacts.user_id 或消息的 from_user_id
-node bin/weixin-bot.js send --to 'USER_ID' --text '你好，我已收到你的消息'
+~/.local/bin/weixin-bot send --to 'USER_ID' --text '你好，我已收到你的消息'
 
 # 持续接收；Ctrl+C 停止
-node bin/weixin-bot.js receive --watch
+~/.local/bin/weixin-bot receive --watch
 ```
 
-需要使用全局短命令时，可在本项目运行 `npm link`，之后以上命令中的 `node bin/weixin-bot.js` 可替换为 `weixin-bot`。不需要全局命令时跳过此步骤。
-
-## 安装为 agent skill
+## 从源码安装（开发者）
 
 ```bash
+git clone https://github.com/dairoot/weixin-bot-cli.git
+cd weixin-bot-cli
+npm ci
 node bin/weixin-bot.js skill install
 ```
 
-默认安装到 `~/.agents/skills/weixin-bot`，包含 `SKILL.md`、启动脚本和独立运行时，移动或删除源码仓库后仍可使用。agent 通过 skill 内的脚本调用 CLI，不依赖 `npm link`。重新打开会话或刷新技能列表后，可用自然语言要求登录、发送或接收微信消息。
+该命令默认安装到 `~/.agents/skills/weixin-bot`，包含 `SKILL.md`、启动脚本和独立运行时，移动或删除源码仓库后仍可使用。agent 通过 skill 内的脚本调用 CLI，不依赖 `npm link`。开发时可直接运行 `node bin/weixin-bot.js`，或用 `npm link` 将源码注册为全局短命令。
 
 指定其他 agent 的 skill 目录：
 
@@ -48,7 +81,7 @@ node bin/weixin-bot.js skill install --dir ~/.codex/skills/weixin-bot
 node ~/.agents/skills/weixin-bot/scripts/weixin-bot.mjs status --json
 ```
 
-安装器不会覆盖已有目录。更新时可先将旧 skill 目录移到备份位置，再重新安装；登录数据仍在 `~/.weixin-bot`。也可直接在仓库内使用 `skills/weixin-bot/scripts/weixin-bot.mjs`。
+`skill install` 保持不覆盖已有目录的行为；需要自动备份更新时，使用上面的一键安装命令。也可直接在仓库内使用 `skills/weixin-bot/scripts/weixin-bot.mjs`。
 
 ## 命令和输出
 
@@ -130,5 +163,7 @@ npm pack --dry-run
 ```
 
 测试使用本地 HTTP 模拟服务和临时数据目录，不调用真实微信账号、不发送真实消息。覆盖扫码、验证码、重定向、凭证持久化、鉴权头、长轮询、游标恢复、会话令牌、消息 ID 精度、积压消息、并发锁、错误处理和 CLI 端到端流程。真实服务的可用性仍需本人扫码后验证。
+
+安装器另有首次安装、重复更新、备份与失败回滚、目录冲突、路径含空格、依赖/下载失败等测试。一键安装入口参考了 [feishu-cli 的安装方式](https://github.com/riba2534/feishu-cli/blob/main/install.sh)。
 
 协议参考源码：`openclaw-weixin/src/api/api.ts`、`src/auth/login-qr.ts`、`src/messaging/send.ts`、`src/monitor/monitor.ts` 及 `docs/protocol_zh_CN.md`。原项目版权说明见 [NOTICE](NOTICE) 和 [LICENSE](LICENSE)。

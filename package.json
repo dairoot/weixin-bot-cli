@@ -6,10 +6,10 @@
   "license": "MIT",
   "engines": { "node": ">=22.13.0" },
   "bin": { "weixin-bot": "bin/weixin-bot.js" },
-  "files": ["bin/", "src/", "skills/", "README.md", "LICENSE", "NOTICE"],
+  "files": ["bin/", "src/", "skills/", "scripts/", "install.sh", "README.md", "LICENSE", "NOTICE"],
   "scripts": {
     "test": "node --test",
-    "check": "node --check bin/weixin-bot.js && node --check src/cli.js && node --check src/client.js && node --check src/store.js && node --check src/bot.js",
+    "check": "node --check bin/weixin-bot.js && node --check src/cli.js && node --check src/client.js && node --check src/store.js && node --check src/bot.js && node --check src/install.js && node --check scripts/install.mjs && bash -n install.sh",
     "prepublishOnly": "npm run check && npm test"
   },
   "dependencies": { "qrcode-terminal": "0.12.0" }

@@ -1,15 +1,12 @@
 import { parseArgs } from 'node:util';
-import { readFile, cp, mkdir, access, rm } from 'node:fs/promises';
-import { dirname, join, resolve, sep } from 'node:path';
-import { homedir } from 'node:os';
-import { fileURLToPath } from 'node:url';
-import { createRequire } from 'node:module';
+import { readFile } from 'node:fs/promises';
+import { resolve } from 'node:path';
 import { createInterface } from 'node:readline/promises';
 import { Store } from './store.js';
 import { BotError, VERSION } from './client.js';
 import { login, status, sendText, receive, contacts, inbox, logout } from './bot.js';
+import { installSkill } from './install.js';
 
-const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const help = `weixin-bot ${VERSION} — 微信 Bot CLI
 
 用法：weixin-bot <命令> [选项]
@@ -70,43 +67,6 @@ async function emit(value) {
   await new Promise((resolveWrite, reject) => {
     process.stdout.write(`${JSON.stringify(value)}\n`, error => error ? reject(error) : resolveWrite());
   });
-}
-
-async function installSkill(target) {
-  let source = join(root, 'skills', 'weixin-bot');
-  try { await access(join(source, 'SKILL.md')); }
-  catch { source = dirname(root); } // Also works from an already-installed runtime.
-  const dest = resolve(target || join(homedir(), '.agents', 'skills', 'weixin-bot'));
-  try {
-    await access(dest);
-    throw new BotError('ALREADY_EXISTS', `目标目录已存在，未覆盖：${dest}。可使用 --dir 安装到新目录。`);
-  } catch (error) { if (error.code !== 'ENOENT') throw error; }
-  // Resolve every source before writing so an incomplete package cannot look installed.
-  await access(join(source, 'SKILL.md'));
-  const require = createRequire(import.meta.url);
-  const qrRoot = dirname(require.resolve('qrcode-terminal/package.json'));
-  for (const copiedDir of [join(root, 'src'), join(root, 'bin'), source, qrRoot]) {
-    if (dest === copiedDir || dest.startsWith(`${copiedDir}${sep}`)) {
-      throw new BotError('INVALID_ARGUMENT', '安装目录不能位于要复制的源码或 skill 目录内部。');
-    }
-  }
-  await mkdir(dirname(dest), { recursive: true });
-  await mkdir(dest);
-  try {
-    await cp(join(source, 'SKILL.md'), join(dest, 'SKILL.md'));
-    await cp(join(source, 'scripts'), join(dest, 'scripts'), { recursive: true });
-    const runtime = join(dest, 'runtime');
-    await mkdir(runtime);
-    for (const name of ['src', 'bin', 'package.json', 'LICENSE', 'NOTICE']) {
-      await cp(join(root, name), join(runtime, name), { recursive: true });
-    }
-    await cp(qrRoot, join(runtime, 'node_modules', 'qrcode-terminal'), { recursive: true });
-  } catch (error) {
-    // Only remove the new directory we exclusively created above.
-    await rm(dest, { recursive: true, force: true });
-    throw error;
-  }
-  return { event: 'skill_installed', path: dest, launcher: join(dest, 'scripts', 'weixin-bot.mjs') };
 }
 
 export async function main(args = process.argv.slice(2)) {
